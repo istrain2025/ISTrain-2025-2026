@@ -11,16 +11,16 @@ g2 = 3;                             % stage 2 gear ratio
 
 % number of sprocket teeth
 Z1 = 17;                            % stage 1 driver
-Z2 = Z1*g1;                         %         driven
+Z2 = round(Z1*g1);                  %         driven
 Z3 = 19;                            % stage 2 driver
-Z4 = Z3*g2;                         %         driven
+Z4 = round(Z3*g2);                  %         driven
                                     
 % correction factors
 f1 = 1.3;                           % application factor, see renold pg 104
 f2_stage1 = 19/Z1;                  % tooth factor for each stage
 f2_stage2 = 19/Z3;
 
-safety_factor = 1.5;
+safety_factor = 1.5; % todo: apply pugsley method
 
 
 %% ---------- POWER ----------
@@ -42,15 +42,15 @@ power_per_wheelset = power_output/2;
 
 %% ---------- PITCH ----------
 % Chain mass per meter
-q_06B = 0.40; 
+q_mass = 0.40; % 06B
 % choose pitch from power and speed needed
 pitch = 9.525;                      % mm - 06B pitch
 % center distance in pitches
 C_est = 40*pitch;                   % estimate, actual C calculated later
 
 % chain length
-L_stage1 =  (Z1+Z2)/2 + (2*C_est)/pitch;
-L_stage2 =  (Z3+Z4)/2 + (2*C_est)/pitch;
+L_stage1 =  (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pitch))^2)*pitch)/C_est;
+L_stage2 =  (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pitch))^2)*pitch)/C_est;
 
 % Actual center distance
 C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
@@ -59,12 +59,12 @@ C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^
 
 %% ---------- TRANSMISSION EQUATIONS ----------
 % stage 1
-v_stage1 = (speed_max*Z1*pitch)/60000;              % m/s, chain linear velocity
-chainpull_stage1 = (1000*power_stage1)/v_stage1;    % N
+v_stage1 = (speed_max*Z1*pitch)/(2*pi*1000);              % m/s, chain linear velocity
+chainpull_stage1 = power_stage1/v_stage1;    % N
 
 % stage 1
-v_stage2 = (speed_jackshaft*Z3*pitch)/60000;
-chainpull_stage2 = (1000*power_per_wheelset)/v_stage2;
+v_stage2 = (speed_jackshaft*Z3*pitch)/(2*pi*1000);
+chainpull_stage2 = power_per_wheelset/v_stage2;
 
 %% ---------- CENTRIFUGAL FORCE & TOTAL TENSION (from PDF page 3) ----------
 % F_oc = q * v^2 [N]
@@ -72,10 +72,10 @@ chainpull_stage2 = (1000*power_per_wheelset)/v_stage2;
 % where q = weight of 1 m chain [kg/m], v = chain velocity [m/s]
 
 % Stage 1 centrifugal force
-F_oc_stage1 = q_06B * v_stage1^2;                           % N
+F_oc_stage1 = q_mass * v_stage1^2;                           % N
 
 % Stage 2 centrifugal force
-F_oc_stage2 = q_06B * v_stage2^2;                           % N
+F_oc_stage2 = q_mass * v_stage2^2;                           % N
 
 % Total chain tension (traction force) for each stage
 % This is F1 in the PDF equation: F1 = F0 + F_oc
@@ -124,15 +124,15 @@ shaft3_diameter = 0.01;
 S_uts = 420e6;              % UTS in Pa for shaft material (AISI 1020)
 S_y = 350e6;                % yield stress
 % endurance stress for each shaft
-[S_e1, S_e2, S_e3] = endurance_stress(S_uts, [d1,d2,d3]);
+[S_e1, S_e2, S_e3] = endurance_stress(S_uts, [shaft1_diameter, shaft2_diameter, shaft3_diameter]);
 
 
 %% ---------- SHAFT STRESSES & SUPPORT REACTIONS ----------
 % pitch diameters
-Dp1 = (p/1000) / sind(180/Z1);      % in m
-Dp2 = (p/1000) / sind(180/Z2);
-Dp3 = (p/1000) / sind(180/Z3);
-Dp4 = (p/1000) / sind(180/Z4);
+Dp1 = (pitch/1000) / sind(180/Z1);      % in m
+Dp2 = (pitch/1000) / sind(180/Z2);
+Dp3 = (pitch/1000) / sind(180/Z3);
+Dp4 = (pitch/1000) / sind(180/Z4);
 
 % Applied forces (in NEWTON)
 F1 = 2*T_max/Dp1;          % F of s-1 driving sprocket on motor shaft
@@ -290,7 +290,7 @@ function s = pick_std(d_mm)
     if isempty(idx), s = ceil(d_mm); else s = stds(idx); end
 end
 
-function S_e = endurance_stress(S_uts, d)
+function [S_e1, S_e2, S_e3] = endurance_stress(S_uts, d)
     % theoretical endurance stress
     S_e_theory = 0.5*S_uts;
     
@@ -302,14 +302,18 @@ function S_e = endurance_stress(S_uts, d)
         k_surface = 4.51*S_uts^(-0.265);        % machined finish
         % size factor
         k_size = zeros(1,3);
+        j = 1;
         for i = d
             if i <= 51
-                k_size = 1.24*i^(-0.107);
+                k_size(j) = 1.24*i^(-0.107);
             else
-                k_size = 1.51*i^(-0.157);
+                k_size(j) = 1.51*i^(-0.157);
             end
+            j = j+1;
         end
 
     % actual endurance stress for each shaft
-    S_e = [S_e_theory*k_surface*k_size(1) S_e_theory*k_surface*k_size(2) S_e_theory*k_surface*k_size(3)];
+    S_e1 = S_e_theory*k_surface*k_size(1);
+    S_e2 = S_e_theory*k_surface*k_size(2);
+    S_e3 = S_e_theory*k_surface*k_size(3);
 end
