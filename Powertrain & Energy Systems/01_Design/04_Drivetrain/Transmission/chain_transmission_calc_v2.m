@@ -208,36 +208,11 @@ shaft2_shear_K = shaft2_shear*Kf_torsion;
 shaft3_shear_K = shaft3_shear*Kf_torsion;
 
 % Check modified Goodman failure criterion
-shaft1_fatigue_safety = 1/(shaft1_bending_K/S_e1)+(shaft1_shear_K/S_uts);
-shaft2_fatigue_safety = 1/(shaft2_bending_K/S_e2)+(shaft2_shear_K/S_uts);
-shaft3_fatigue_safety = 1/(shaft3_bending_K/S_e3)+(shaft3_shear_K/S_uts);
+shaft1_fatigue_safety = 1/((shaft1_bending_K/S_e1)+(shaft1_shear_K/S_uts));
+shaft2_fatigue_safety = 1/((shaft2_bending_K/S_e2)+(shaft2_shear_K/S_uts));
+shaft3_fatigue_safety = 1/((shaft3_bending_K/S_e3)+(shaft3_shear_K/S_uts));
 
 fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safety] >= safety_factor;
-
-
-%% ---------- CALCULATIONS (old) ----------
-% Conservative forces (driver vs driven) + dynamic factor
-F1_driver = T_max / r1_driver;
-F1_driven = T_int / r1_driven;
-F_stage1 = max(F1_driver, F1_driven) * dynamic_factor;
-
-F2_driver = T_int / r2_driver;
-F2_driven = T_out / r2_driven;
-F_stage2 = max(F2_driver, F2_driven) * dynamic_factor;
-
-% Capacity and margins
-tensile_workable = tensile_strength_chain / safety_factor_chain;
-margin1_pct = (tensile_workable - F_stage1) / tensile_workable * 100;
-margin2_pct = (tensile_workable - F_stage2) / tensile_workable * 100;
-
-% Shaft diameters (approx torsion)
-d_motor_mm = ( (16*T_max/(pi*tau_allow))^(1/3) )*1000;
-d_intermediate_mm = ( (16*T_int/(pi*tau_allow))^(1/3) )*1000;
-d_output_mm = ( (16*T_out/(pi*tau_allow))^(1/3) )*1000;
-
-d_motor_suggest = pick_std(d_motor_mm);
-d_intermediate_suggest = pick_std(d_intermediate_mm);
-d_output_suggest = pick_std(d_output_mm);
 
 
 % ----------------- IDLER SIZING (both idlers on stage-2) -----------------
@@ -287,7 +262,11 @@ end
 function s = pick_std(d_mm)
     stds = [6 8 10 12 14 15 16 18 20 22 24 25 28 30 32 35 38 40 45 50];
     idx = find(stds >= ceil(d_mm), 1, 'first');
-    if isempty(idx), s = ceil(d_mm); else s = stds(idx); end
+    if isempty(idx)
+        s = ceil(d_mm);
+    else
+        s = stds(idx);
+    end
 end
 
 function [S_e1, S_e2, S_e3] = endurance_stress(S_uts, d)
@@ -299,7 +278,7 @@ function [S_e1, S_e2, S_e3] = endurance_stress(S_uts, d)
 
     % Marin correction factors (check Shigley/PCMec slides)
         % surface finish correction factor
-        k_surface = 4.51*S_uts^(-0.265);        % machined finish
+        k_surface = 4.51*(S_uts/1000000)^(-0.265);        % machined finish
         % size factor
         k_size = zeros(1,3);
         j = 1;
