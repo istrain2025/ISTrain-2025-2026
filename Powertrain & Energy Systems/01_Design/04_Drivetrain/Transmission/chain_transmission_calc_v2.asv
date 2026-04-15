@@ -103,9 +103,8 @@ shaft3_length = 0.10;
 shaft3_support = 0.5;
 shaft3_diameter = 0.01;
 
-% material properties
-S_uts = 420e6;              % UTS in Pa for shaft material (AISI 1020)
-S_y = 350e6;                % yield stress
+% tensile strength of shaft material
+S_uts = 420e6;              % shaft material UTS in Pa (AISI 1020)
 % endurance stress for each shaft
 [S_e1, S_e2, S_e3] = endurance_stress(S_uts, [d1,d2,d3]);
 
@@ -154,48 +153,26 @@ shaft2_shear = (16*T_stage1)/(pi*shaft2_diameter^3);
 shaft3_bending = (32*shaft3_M)/(pi*shaft3_diameter^3);
 shaft3_shear = (16*T_per_wheelset)/(pi*shaft3_diameter^3);
 
-
-%% ---------- STATIC SAFETY ----------
-% von Mises stresses
-shaft1_vm = sqrt(shaft1_bending^2 + 3*shaft1_shear^2);
-shaft2_vm = sqrt(shaft2_bending^2 + 3*shaft2_shear^2);
-shaft3_vm = sqrt(shaft3_bending^2 + 3*shaft3_shear^2);
-
-shaft1_static_safety = S_y/shaft1_vm;
-shaft2_static_safety = S_y/shaft2_vm;
-shaft3_static_safety = S_y/shaft3_vm;
-
-static_isOK = [shaft1_static_safety shaft2_static_safety shaft3_static_safety] >= safety_factor;
+% Fatigue stress concentration coefficents
+% (highest stress concentration will happen in the keyway)
+stress_concentration_torsion = 3.0;     % static stress concentrations Kf
+stress_concentration_bending = 2.2;
+% notch sensitivity (for S_uts=420 MPa, and a keyway radius of 0.2 mm)
+% values taken from figures 6.20 and 
+notch_sensitivity_torsion = 
 
 
-%% ---------- FATIGUE SAFETY ----------
+
+
+%% ---------- FATIGUE FAILURE CRITERIA ----------
 % we have torsion + rotating bending, this means that for fatigue:
 % shear stress = mean stress, bending stress = stress amplitude
 
-% Keyway static stress concentration coefficents, Kt
-Kt_torsion = 3.0;
-Kt_bending = 2.2;
-% notch sensitivity (for S_uts=420 MPa, and keyway radius of 0.2 mm)
-% values taken from figures 6.20 and 6.21 in Shigley
-notch_sensitivity = 0.5;
-% Fatigue stress concentration coefficents Kf = q*(Kt+1)-1
-Kf_bending = notch_sensitivity*(Kt_bending+1)-1;
-Kf_torsion = notch_sensitivity*(Kt_torsion+1)-1;
-
-% corrected stresses
-shaft1_bending_K = shaft1_bending*Kf_bending;
-shaft2_bending_K = shaft2_bending*Kf_bending;
-shaft3_bending_K = shaft2_bending*Kf_bending;
-shaft1_shear_K = shaft1_shear*Kf_torsion;
-shaft2_shear_K = shaft2_shear*Kf_torsion;
-shaft3_shear_K = shaft2_shear*Kf_torsion;
-
 % Check modified Goodman failure criterion
-shaft1_fatigue_safety = 1/(shaft1_bending_K/S_e1)+(shaft1_shear_K/S_uts);
-shaft2_fatigue_safety = 1/(shaft2_bending_K/S_e2)+(shaft2_shear_K/S_uts);
-shaft3_fatigue_safety = 1/(shaft3_bending_K/S_e3)+(shaft3_shear_K/S_uts);
+shaft1_isOK = (shaft1_bending/S_e1)+(shaft1_shear/S_uts) == 1/safety_factor;
+shaft2_isOK = (shaft2_bending/S_e2)+(shaft2_shear/S_uts) == 1/safety_factor;
+shaft3_isOK = (shaft3_bending/S_e3)+(shaft3_shear/S_uts) == 1/safety_factor;
 
-fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safety] >= safety_factor;
 
 
 %% ---------- CALCULATIONS (old) ----------
