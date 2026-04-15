@@ -168,7 +168,7 @@ shaft3_static_safety = S_y/shaft3_vm;
 static_isOK = [shaft1_static_safety shaft2_static_safety shaft3_static_safety] >= safety_factor;
 
 
-%% ---------- FATIGUE SAFETY ----------
+%% ---------- FATIGUE SAFETY (for infinite life) ----------
 % we have torsion + rotating bending, this means that for fatigue:
 % shear stress = mean stress, bending stress = stress amplitude
 
