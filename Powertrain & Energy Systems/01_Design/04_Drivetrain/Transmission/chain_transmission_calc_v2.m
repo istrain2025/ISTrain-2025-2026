@@ -48,11 +48,11 @@ pitch = 9.525;                      % mm - 06B pitch
 % center distance in pitches
 C_est = 40*pitch;                   % estimate, actual C calculated later
 
-% chain length
-L_stage1 =  (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pitch))^2)*pitch)/C_est;
-L_stage2 =  (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pitch))^2)*pitch)/C_est;
+% chain length in mm
+L_stage1 = pitch*( (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est );
+L_stage2 = pitch*( (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est );
 
-% Actual center distance
+% Actual center distance in mm
 C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
 
@@ -107,18 +107,18 @@ make_plots = true;
 %% ---------- SHAFT DESIGN PARAMETERS ----------
 % shaft dimensions (in m)
 % motor shaft
-shaft1_length = 0.10;
-shaft1_support = 0.5;       % distance from sprocket to one of the bearings
-shaft1_diameter = 0.01;     % critical cross section diameter
+shaft1_length = 0.50;
+shaft1_support = 0.25;      % distance from sprocket to one of the bearings
+shaft1_diameter = 0.02;     % critical cross section diameter
 % jackshaft
-shaft2_length = 0.10;
-shaft2_support = 0.5;
-shaft2_spacing = 0.25;   % d between s-1 and s-2 sprockets, assume symmetry
-shaft2_diameter = 0.01;
+shaft2_length = 0.50;
+shaft2_support = 0.25;
+shaft2_spacing = 0.125;  % d between s-1 and s-2 sprockets, assume symmetry
+shaft2_diameter = 0.02;
 % wheelset
-shaft3_length = 0.10;
-shaft3_support = 0.5;
-shaft3_diameter = 0.01;
+shaft3_length = 0.50;
+shaft3_support = shaft2_spacing;
+shaft3_diameter = 0.02;
 
 % material properties
 S_uts = 420e6;              % UTS in Pa for shaft material (AISI 1020)
@@ -202,10 +202,10 @@ Kf_torsion = notch_sensitivity*(Kt_torsion+1)-1;
 % corrected stresses
 shaft1_bending_K = shaft1_bending*Kf_bending;
 shaft2_bending_K = shaft2_bending*Kf_bending;
-shaft3_bending_K = shaft2_bending*Kf_bending;
+shaft3_bending_K = shaft3_bending*Kf_bending;
 shaft1_shear_K = shaft1_shear*Kf_torsion;
 shaft2_shear_K = shaft2_shear*Kf_torsion;
-shaft3_shear_K = shaft2_shear*Kf_torsion;
+shaft3_shear_K = shaft3_shear*Kf_torsion;
 
 % Check modified Goodman failure criterion
 shaft1_fatigue_safety = 1/(shaft1_bending_K/S_e1)+(shaft1_shear_K/S_uts);
