@@ -66,7 +66,7 @@ chainpull_stage1 = (1000*power_stage1)/v_stage1;    % N
 v_stage2 = (speed_jackshaft*Z3*pitch)/60000;
 chainpull_stage2 = (1000*power_per_wheelset)/v_stage2;
 
-%% ---------- CENTRIFUGAL FORCE & TOTAL TENSION (from PDF page 3) ----------
+%% ---------- CENTRIFUGAL FORCE & TOTAL TENSION ----------
 % F_oc = q * v^2 [N]
 % F_total = F0 + F_oc [N]
 % where q = weight of 1 m chain [kg/m], v = chain velocity [m/s]
@@ -78,7 +78,7 @@ F_oc_stage1 = q_06B * v_stage1^2;                           % N
 F_oc_stage2 = q_06B * v_stage2^2;                           % N
 
 % Total chain tension (traction force) for each stage
-% This is F1 in the PDF equation: F1 = F0 + F_oc
+% F1 = F0 + F_oc
 F_total_stage1 = chainpull_stage1 + F_oc_stage1;            % N
 F_total_stage2 = chainpull_stage2 + F_oc_stage2;            % N
 
