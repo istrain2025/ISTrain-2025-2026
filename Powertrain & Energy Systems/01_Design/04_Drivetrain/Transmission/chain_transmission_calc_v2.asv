@@ -47,19 +47,16 @@ pitch = 9.525;                      % mm - 06B pitch
 % center distance in pitches
 C_est = 40*pitch;                   % estimate, actual C calculated later
 
-% chain length [pitches]
-L_stage1 = (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est ;
-L_stage2 =  (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est ;
+% chain length in mm
+L_stage1 = pitch*( (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est );
+L_stage2 = pitch*( (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est );
 
-% Chain length [mm]
-L_stage1_mm = pitch*( (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est )
-L_stage2_mm = pitch*( (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est )
+L_stage1
+L_stage2
 
 % Actual center distance in mm
-C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)))
-C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)))
-
-
+C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
+C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
 
 
 %% ---------- TRANSMISSION EQUATIONS ----------
