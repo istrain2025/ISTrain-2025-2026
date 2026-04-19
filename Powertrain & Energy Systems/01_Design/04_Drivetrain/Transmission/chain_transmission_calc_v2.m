@@ -19,7 +19,11 @@ f1 = 1.3;                           % application factor, see renold pg 104
 f2_stage1 = 19/Z1;                  % tooth factor for each stage
 f2_stage2 = 19/Z3;
 
-safety_factor = 1.5; % todo: apply pugsley method
+safety_factor = 1.5;                % todo: apply pugsley method
+
+% geometry limitations (due to bogie design)
+L1_max = 180;                       % mm
+L2_max = 325;
 
 
 %% ---------- POWER ----------
@@ -28,47 +32,54 @@ speed_max = (speed_max*2*pi)/60;    % convert to rad/s
 % STAGE 1
 speed_jackshaft = speed_max/g1;
 T_stage1 = T_max*g1;
-power_stage1 = f1*f2_stage1*speed_jackshaft*T_max;
+power_stage1 = f1*f2_stage1*speed_jackshaft*T_stage1;
 
 % STAGE 2
 speed_wheelset = speed_jackshaft/g2;
-% note: total output torque and power are 2x what is given to each wheelset
+% note: total output torque is 2x what is given to each wheelset
 T_output = T_stage1*g2;
 T_per_wheelset = T_output/2;
-power_output = f1*f2_stage2*speed_wheelset*T_stage1;
-power_per_wheelset = power_output/2;
+power_per_wheelset = f1*f2_stage2*speed_wheelset*T_per_wheelset;
+
 
 
 %% ---------- PITCH ----------
-% Chain mass per meter
-q_mass = 0.40; % 06B
 % choose pitch from power and speed needed
-pitch = 9.525;                      % mm - 06B pitch
-% center distance in pitches
-C_est = 40*pitch;                   % estimate, actual C calculated later
+% Stage 1
+pitch_1 = 6;
+q_mass_1 = 0.4;                       % Chain mass per meter
+C_est_1 = 40*pitch_1;                 % estimate in pitches, actual C calculated later
 
-% chain length [pitches]
-L_stage1 = (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est ;
-L_stage2 =  (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est ;
+% chain length
+L_stage1 = (Z1+Z2)/2 + (2*C_est_1)/pitch_1 + ((((Z2-Z1)/(2*pi))^2)*pitch_1)/C_est_1 ;   % [pitches]
+L_stage1_mm = L_stage1*pitch_1;                                                         % [mm]
+% actual center distance in mm
+C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 
-% Chain length [mm]
-L_stage1_mm = pitch*( (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est )
-L_stage2_mm = pitch*( (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est )
+% Stage 2
+pitch_2 = 9.525;                      % mm - 06B pitch
+q_mass_2 = 0.40;                      % 06B
+C_est_2 = 40*pitch_2;
 
-% Actual center distance in mm
-C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)))
-C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)))
+L_stage2 =  (Z3+Z4)/2 + (2*C_est_2)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C_est_2 ;
+L_stage2_mm = pitch_2*L_stage2;
 
+C2 = (pitch_2/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
 
+% pitch diameters
+Dp1 = (pitch_1/1000) / sind(180/Z1);      % in m
+Dp2 = (pitch_1/1000) / sind(180/Z2);
+Dp3 = (pitch_2/1000) / sind(180/Z3);
+Dp4 = (pitch_2/1000) / sind(180/Z4);
 
 
 %% ---------- TRANSMISSION EQUATIONS ----------
 % stage 1
-v_stage1 = (speed_max*Z1*pitch)/(2*pi*1000);              % m/s, chain linear velocity
+v_stage1 = (speed_max*Z1*pitch_1)/(2*pi*1000);              % m/s, chain linear velocity
 chainpull_stage1 = power_stage1/v_stage1;    % N
 
 % stage 1
-v_stage2 = (speed_jackshaft*Z3*pitch)/(2*pi*1000);
+v_stage2 = (speed_jackshaft*Z3*pitch_2)/(2*pi*1000);
 chainpull_stage2 = power_per_wheelset/v_stage2;
 
 %% ---------- CENTRIFUGAL FORCE & TOTAL TENSION ----------
@@ -77,10 +88,10 @@ chainpull_stage2 = power_per_wheelset/v_stage2;
 % where q = weight of 1 m chain [kg/m], v = chain velocity [m/s]
 
 % Stage 1 centrifugal force
-F_oc_stage1 = q_mass * v_stage1^2;                           % N
+F_oc_stage1 = q_mass_2 * v_stage1^2;                           % N
 
 % Stage 2 centrifugal force
-F_oc_stage2 = q_mass * v_stage2^2;                           % N
+F_oc_stage2 = q_mass_2 * v_stage2^2;                           % N
 
 % Total chain tension (traction force) for each stage
 % F1 = F0 + F_oc
@@ -93,23 +104,6 @@ F_total_stage2 = chainpull_stage2 + F_oc_stage2;            % N
 %% ---------- MATERIALS & SAFETY ----------
 % Approximate values for 06B chain (verify with manufacturer)
 tensile_strength_chain = 8900;   % in N, (minimum tensile strength for 06B chain according to ISO 606 - CHECK vendor)
-
-
-%% ---------- IDLERS ----------
-% Idler configuration: both idlers on stage-2
-num_idlers_stage1 = 0;   % no sprung idlers on stage-1
-num_idlers_stage2 = 2;   % both sprung idlers on stage-2 (split preload)
-
-% Idler defaults
-idler_travel = 25;     % mm - available travel for each idler
-idler_preload_ratio = 0.08; % fraction of working tension used as total preload for stage-2
-
-% Minimum per-stage total preload (keeps tiny systems from choosing too small springs)
-min_total_preload_stage1 = 0;   % N (stage1 no idlers)
-min_total_preload_stage2 = 80;  % N (total across all idlers on stage2)
-
-dynamic_factor = 1.3;
-make_plots = true;
 
 
 %% ---------- SHAFT DESIGN PARAMETERS ----------
@@ -136,12 +130,6 @@ S_y = 350e6;                % yield stress
 
 
 %% ---------- SHAFT STRESSES & SUPPORT REACTIONS ----------
-% pitch diameters
-Dp1 = (pitch/1000) / sind(180/Z1);      % in m
-Dp2 = (pitch/1000) / sind(180/Z2);
-Dp3 = (pitch/1000) / sind(180/Z3);
-Dp4 = (pitch/1000) / sind(180/Z4);
-
 % Applied forces (in NEWTON)
 F1 = 2*T_max/Dp1;          % F of s-1 driving sprocket on motor shaft
 F2 = 2*T_stage1/Dp2;       % F of s-1 driven sprocket on jackshaft
@@ -223,48 +211,89 @@ shaft3_fatigue_safety = 1/((shaft3_bending_K/S_e3)+(shaft3_shear_K/S_uts));
 fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safety] >= safety_factor;
 
 
-% ----------------- IDLER SIZING (both idlers on stage-2) -----------------
-% Stage-1: no sprung idlers
-total_preload_stage1 = min_total_preload_stage1;   % 0 N
-per_idler_preload_stage1 = 0;
-k_idler_stage1 = 0;
 
-% Stage-2: total preload (distributed across num_idlers_stage2)
-if num_idlers_stage2 <= 0
-    error('num_idlers_stage2 must be >= 1 when placing idlers on stage-2.');
-end
+% 
+% %% ---------- IDLERS ----------
+% % Idler configuration: both idlers on stage-2
+% num_idlers_stage1 = 0;   % no sprung idlers on stage-1
+% num_idlers_stage2 = 2;   % both sprung idlers on stage-2 (split preload)
+% 
+% % Idler defaults
+% idler_travel = 25;     % mm - available travel for each idler
+% idler_preload_ratio = 0.08; % fraction of working tension used as total preload for stage-2
+% 
+% % Minimum per-stage total preload (keeps tiny systems from choosing too small springs)
+% min_total_preload_stage1 = 0;   % N (stage1 no idlers)
+% min_total_preload_stage2 = 80;  % N (total across all idlers on stage2)
+% 
+% dynamic_factor = 1.3;
+% make_plots = true;
+% 
+% % ----------------- IDLER SIZING (both idlers on stage-2) -----------------
+% % Stage-1: no sprung idlers
+% total_preload_stage1 = min_total_preload_stage1;   % 0 N
+% per_idler_preload_stage1 = 0;
+% k_idler_stage1 = 0;
+% 
+% % Stage-2: total preload (distributed across num_idlers_stage2)
+% if num_idlers_stage2 <= 0
+%     error('num_idlers_stage2 must be >= 1 when placing idlers on stage-2.');
+% end
+% 
+% total_preload_stage2 = max(min_total_preload_stage2, idler_preload_ratio * F_stage2);   % N
+% per_idler_preload_stage2 = total_preload_stage2 / num_idlers_stage2;                    % each idler supplies this preload
+% k_idler_stage2 = per_idler_preload_stage2 / idler_travel;                               % N/mm per idler
 
-total_preload_stage2 = max(min_total_preload_stage2, idler_preload_ratio * F_stage2);   % N
-per_idler_preload_stage2 = total_preload_stage2 / num_idlers_stage2;                    % each idler supplies this preload
-k_idler_stage2 = per_idler_preload_stage2 / idler_travel;                               % N/mm per idler
 
 
-%% ---------- DISPLAY ----------
-fprintf('--- 06B solution (both idlers on stage-2) ---\n');
-fprintf('Total ratio = %.3g (%.3g x %.3g)\n', ratio_total, ratio1, ratio2);
-fprintf('Pitch diameters (mm): %dT=%.1f, %dT=%.1f, %dT=%.1f, %dT=%.1f\n', ...
-    N_stage1_driver, Dp1_driver, N_stage1_driven, Dp1_driven, N_stage2_driver, Dp2_driver, N_stage2_driven, Dp2_driven);
-fprintf('Torques (N·m): motor=%.2f, interm=%.2f, out=%.2f\n', T_max, T_int, T_out);
-fprintf('Design chain forces (dyn x%.2f): stage1=%.1f N, stage2=%.1f N\n', dynamic_factor, F_stage1, F_stage2);
-fprintf('Chain workable (SF %.2f)= %.1f N => margins: s1=%.1f%% s2=%.1f%%\n', safety_factor_chain, tensile_workable, margin1_pct, margin2_pct);
-fprintf('Chain lengths: stage1 %d links (%.1f mm), stage2 %d links (%.1f mm)\n', Lp1, L1_mm, Lp2, L2_mm);
+%% ---------- PRINT RESULTS ----------
+fprintf('Selection power: stage 1 = %.1f W, stage 2 = %.1f W\n\n', power_stage1, power_per_wheelset);
 
-fprintf('\nIdler configuration:\n');
-fprintf('  Stage1: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
-    num_idlers_stage1, total_preload_stage1, per_idler_preload_stage1, k_idler_stage1);
-fprintf('  Stage2: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
-    num_idlers_stage2, total_preload_stage2, per_idler_preload_stage2, k_idler_stage2);
+fprintf('STAGE 1 - 04B chain (pitch = %.3f mm)\n', pitch_1)
+fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
+    Z1, Dp1*1000, Z2, Dp2*1000);
+fprintf('   Chain length: %.1f mm\n', L_stage1_mm);
+fprintf('   Center distance: %.1f mm\n\n', C1);
 
-fprintf('\nSuggested shaft diameters (mm): motor=%d, interm=%d, out=%d\n', d_motor_suggest, d_intermediate_suggest, d_output_suggest);
+fprintf('STAGE 2 - 06B chain (pitch = %.3f mm)\n', pitch_2)
+fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
+    Z3, Dp3*1000, Z4, Dp4*1000);
+fprintf('   Chain length: %.1f mm\n', L_stage2_mm);
+fprintf('   Center distance: %.1f mm\n\n', C2);
+
+
+
+
+
+
+
+
+%% ---------- DISPLAY (old) ----------
+%fprintf('--- 06B solution (both idlers on stage-2) ---\n');
+%fprintf('Total ratio = %.3g (%.3g x %.3g)\n', ratio_total, ratio1, ratio2);
+%fprintf('Pitch diameters (mm): %dT=%.1f, %dT=%.1f, %dT=%.1f, %dT=%.1f\n', ...
+    %N_stage1_driver, Dp1_driver, N_stage1_driven, Dp1_driven, N_stage2_driver, Dp2_driver, N_stage2_driven, Dp2_driven);
+%fprintf('Torques (N·m): motor=%.2f, interm=%.2f, out=%.2f\n', T_max, T_int, T_out);
+%fprintf('Design chain forces (dyn x%.2f): stage1=%.1f N, stage2=%.1f N\n', dynamic_factor, F_stage1, F_stage2);
+%fprintf('Chain workable (SF %.2f)= %.1f N => margins: s1=%.1f%% s2=%.1f%%\n', safety_factor_chain, tensile_workable, margin1_pct, margin2_pct);
+%fprintf('Chain lengths: stage1 %d links (%.1f mm), stage2 %d links (%.1f mm)\n', Lp1, L1_mm, Lp2, L2_mm);
+
+%fprintf('\nIdler configuration:\n');
+%fprintf('  Stage1: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
+ %   num_idlers_stage1, total_preload_stage1, per_idler_preload_stage1, k_idler_stage1);
+%fprintf('  Stage2: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
+ %   num_idlers_stage2, total_preload_stage2, per_idler_preload_stage2, k_idler_stage2);
+
+%fprintf('\nSuggested shaft diameters (mm): motor=%d, interm=%d, out=%d\n', d_motor_suggest, d_intermediate_suggest, d_output_suggest);
 
 %% plot (optional)
-if make_plots
-    figure; Tm_vec = linspace(1,30,200);
-    plot(Tm_vec./r1_driver * dynamic_factor); hold on;
-    plot((Tm_vec*ratio1*eta1)./r2_driver * dynamic_factor);
-    yline(tensile_workable,'k--'); legend('Stage1','Stage2','Chain workable');
-    xlabel('Motor torque (N·m)'); ylabel('Chain force (N)'); grid on;
-end
+%if make_plots
+ %   figure; Tm_vec = linspace(1,30,200);
+  %  plot(Tm_vec./r1_driver * dynamic_factor); hold on;
+   % plot((Tm_vec*ratio1*eta1)./r2_driver * dynamic_factor);
+    %yline(tensile_workable,'k--'); legend('Stage1','Stage2','Chain workable');
+    %xlabel('Motor torque (N·m)'); ylabel('Chain force (N)'); grid on;
+%end
 
 %% helpers
 function s = pick_std(d_mm)

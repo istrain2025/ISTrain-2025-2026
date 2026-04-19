@@ -28,44 +28,71 @@ speed_max = (speed_max*2*pi)/60;    % convert to rad/s
 % STAGE 1
 speed_jackshaft = speed_max/g1;
 T_stage1 = T_max*g1;
-power_stage1 = f1*f2_stage1*speed_jackshaft*T_max;
+power_stage1 = f1*f2_stage1*speed_jackshaft*T_stage1;
 
 % STAGE 2
 speed_wheelset = speed_jackshaft/g2;
 % note: total output torque and power are 2x what is given to each wheelset
 T_output = T_stage1*g2;
 T_per_wheelset = T_output/2;
-power_output = f1*f2_stage2*speed_wheelset*T_stage1;
+power_output = f1*f2_stage2*speed_wheelset*T_output;
 power_per_wheelset = power_output/2;
 
 
+% results
+fprintf('Power: stage1 = %.1f W, total output = %.1f W, given to each wheelset = %.1f W\n', power_stage1, power_output,power_per_wheelset);
+
+
 %% ---------- PITCH ----------
-% Chain mass per meter
-q_mass = 0.40; % 06B
 % choose pitch from power and speed needed
-pitch = 9.525;                      % mm - 06B pitch
-% center distance in pitches
-C_est = 40*pitch;                   % estimate, actual C calculated later
+% Stage 1
+pitch_1 = 9.525;
+q_mass_1 = 0.4;                       % Chain mass per meter
+C_est_1 = 40*pitch_1;                 % estimate in pitches, actual C calculated later
 
-% chain length in mm
-L_stage1 = pitch*( (Z1+Z2)/2 + (2*C_est)/pitch + ((((Z2-Z1)/(2*pi))^2)*pitch)/C_est );
-L_stage2 = pitch*( (Z3+Z4)/2 + (2*C_est)/pitch + ((((Z4-Z3)/(2*pi))^2)*pitch)/C_est );
+% chain length
+L_stage1 = (Z1+Z2)/2 + (2*C_est_1)/pitch_1 + ((((Z2-Z1)/(2*pi))^2)*pitch_1)/C_est_1 ;   % [pitches]
+L_stage1_mm = L_stage1*pitch_1;                                                         % [mm]
+% actual center distance in mm
+C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 
-L_stage1
-L_stage2
+% Stage 2
+pitch_2 = 9.525;                      % mm - 06B pitch
+q_mass_2 = 0.40;                      % 06B
+C_est_2 = 40*pitch_2;
 
-% Actual center distance in mm
-C1 = (pitch/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
-C2 = (pitch/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
+L_stage2 =  (Z3+Z4)/2 + (2*C_est_2)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C_est_2 ;
+L_stage2_mm = pitch_2*L_stage2;
+
+C2 = (pitch_2/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
+
+% pitch diameters
+Dp1 = (pitch_1/1000) / sind(180/Z1);      % in m
+Dp2 = (pitch_1/1000) / sind(180/Z2);
+Dp3 = (pitch_2/1000) / sind(180/Z3);
+Dp4 = (pitch_2/1000) / sind(180/Z4);
+
+
+% results
+fprintf('Pitch diameters: Stage 1 driver (%dT) = %.5f mm, stage 1 driven (%dT) = %.5f mm, stage 2 driver (%dT) = %.5f mm, stage 2 driven (%dT) = %.5f mm\n', ...
+    Z1, Dp1*1000, Z2, Dp2*1000, Z3, Dp3*1000, Z4, Dp4*1000);
+fprintf('Chain lengths: stage1 %.1f mm, stage2 %.1f mm\n', L_stage1_mm, L_stage2_mm);
+fprintf('Center distances: stage1 %.1f mm, stage2 %.1f mm\n', C1, C2);
+
+
+fprintf('STAGE 1 - 06B chain (pitch = %.3f mm)\n', pitch)
+fprintf('   Driving sprocket (%dT) Dp= %.5f mm, stage 1 driven (%dT) = %.5f mm, stage 2 driver (%dT) = %.5f mm, stage 2 driven (%dT) = %.5f mm\n', ...
+
+
 
 
 %% ---------- TRANSMISSION EQUATIONS ----------
 % stage 1
-v_stage1 = (speed_max*Z1*pitch)/(2*pi*1000);              % m/s, chain linear velocity
+v_stage1 = (speed_max*Z1*pitch_1)/(2*pi*1000);              % m/s, chain linear velocity
 chainpull_stage1 = power_stage1/v_stage1;    % N
 
 % stage 1
-v_stage2 = (speed_jackshaft*Z3*pitch)/(2*pi*1000);
+v_stage2 = (speed_jackshaft*Z3*pitch_2)/(2*pi*1000);
 chainpull_stage2 = power_per_wheelset/v_stage2;
 
 %% ---------- CENTRIFUGAL FORCE & TOTAL TENSION ----------
@@ -74,10 +101,10 @@ chainpull_stage2 = power_per_wheelset/v_stage2;
 % where q = weight of 1 m chain [kg/m], v = chain velocity [m/s]
 
 % Stage 1 centrifugal force
-F_oc_stage1 = q_mass * v_stage1^2;                           % N
+F_oc_stage1 = q_mass_2 * v_stage1^2;                           % N
 
 % Stage 2 centrifugal force
-F_oc_stage2 = q_mass * v_stage2^2;                           % N
+F_oc_stage2 = q_mass_2 * v_stage2^2;                           % N
 
 % Total chain tension (traction force) for each stage
 % F1 = F0 + F_oc
@@ -133,12 +160,6 @@ S_y = 350e6;                % yield stress
 
 
 %% ---------- SHAFT STRESSES & SUPPORT REACTIONS ----------
-% pitch diameters
-Dp1 = (pitch/1000) / sind(180/Z1);      % in m
-Dp2 = (pitch/1000) / sind(180/Z2);
-Dp3 = (pitch/1000) / sind(180/Z3);
-Dp4 = (pitch/1000) / sind(180/Z4);
-
 % Applied forces (in NEWTON)
 F1 = 2*T_max/Dp1;          % F of s-1 driving sprocket on motor shaft
 F2 = 2*T_stage1/Dp2;       % F of s-1 driven sprocket on jackshaft
