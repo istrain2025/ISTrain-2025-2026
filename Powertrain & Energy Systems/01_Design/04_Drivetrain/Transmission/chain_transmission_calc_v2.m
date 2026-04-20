@@ -52,6 +52,7 @@ C_est_1 = 40*pitch_1;                 % estimate in pitches, actual C calculated
 
 % chain length
 L_stage1 = (Z1+Z2)/2 + (2*C_est_1)/pitch_1 + ((((Z2-Z1)/(2*pi))^2)*pitch_1)/C_est_1 ;   % [pitches]
+L_stage1 = ceil(L_stage1 / 2) * 2;
 L_stage1_mm = L_stage1*pitch_1;                                                         % [mm]
 % actual center distance in mm
 C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
@@ -62,6 +63,7 @@ q_mass_2 = 0.40;                      % 06B
 C_est_2 = 40*pitch_2;
 
 L_stage2 =  (Z3+Z4)/2 + (2*C_est_2)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C_est_2 ;
+L_stage2 = ceil(L_stage2 / 2) * 2;
 L_stage2_mm = pitch_2*L_stage2;
 
 C2 = (pitch_2/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
