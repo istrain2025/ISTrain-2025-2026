@@ -133,5 +133,5 @@ fprintf('Total Air per Cycle:   %.2f L\n',Total_Air_Cycle);
 fprintf('Compressor flow rate required:  %.2f L/min\n', Q_Compressor);
 fprintf('Minimum Aux. Vol.: %.2f L\n', Aux_Vol*2); 
 fprintf('Mininmum Main Vol.: %.2f L\n', Main_Vol);
-fprintf('Required FLR Air service unit flow rate: %.1f L/min\n', Required_Flow);
+fprintf('Peak flow rate: %.1f L/min\n', Required_Flow);
 fprintf('Torque: %.1f N.m\n', torque);
