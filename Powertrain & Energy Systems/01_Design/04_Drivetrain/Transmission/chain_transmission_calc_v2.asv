@@ -1,0 +1,324 @@
+
+clearvars; close all; clc;
+
+
+%% ---------- PARAMETERS ----------
+T_max = 12;                         % N·m - motor max torque
+speed_max = 4000;                   % max rpm (at the motor)
+g1 = 3.35;                          % stage 1 gear ratio
+g2 = 3;                             % stage 2 gear ratio
+
+% number of sprocket teeth
+Z1 = 17;                            % stage 1 driver
+Z2 = round(Z1*g1);                  %         driven
+Z3 = 19;                            % stage 2 driver
+Z4 = round(Z3*g2);                  %         driven
+                                    
+% correction factors
+f1 = 1.3;                           % application factor, see renold pg 104
+f2_stage1 = 19/Z1;                  % tooth factor for each stage
+f2_stage2 = 19/Z3;
+
+safety_factor = 1.5; % todo: apply pugsley method
+
+
+%% ---------- POWER ----------
+speed_max = (speed_max*2*pi)/60;    % convert to rad/s
+
+% STAGE 1
+speed_jackshaft = speed_max/g1;
+T_stage1 = T_max*g1;
+power_stage1 = f1*f2_stage1*speed_jackshaft*T_stage1;
+
+% STAGE 2
+speed_wheelset = speed_jackshaft/g2;
+% note: total output torque and power are 2x what is given to each wheelset
+T_output = T_stage1*g2;
+T_per_wheelset = T_output/2;
+power_output = f1*f2_stage2*speed_wheelset*T_output;
+power_per_wheelset = power_output/2;
+
+
+% results
+fprintf('Power: stage1 = %.1f W, total output = %.1f W, given to each wheelset = %.1f W\n', power_stage1, power_output,power_per_wheelset);
+
+
+%% ---------- PITCH ----------
+% choose pitch from power and speed needed
+% Stage 1
+pitch_1 = 9.525;
+q_mass_1 = 0.4;                       % Chain mass per meter
+C_est_1 = 40*pitch_1;                 % estimate in pitches, actual C calculated later
+
+% chain length
+L_stage1 = (Z1+Z2)/2 + (2*C_est_1)/pitch_1 + ((((Z2-Z1)/(2*pi))^2)*pitch_1)/C_est_1 ;   % [pitches]
+L_stage1_mm = L_stage1*pitch_1;                                                         % [mm]
+% actual center distance in mm
+C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
+
+% Stage 2
+pitch_2 = 9.525;                      % mm - 06B pitch
+q_mass_2 = 0.40;                      % 06B
+C_est_2 = 40*pitch_2;
+
+L_stage2 =  (Z3+Z4)/2 + (2*C_est_2)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C_est_2 ;
+L_stage2_mm = pitch_2*L_stage2;
+
+C2 = (pitch_2/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
+
+% pitch diameters
+Dp1 = (pitch_1/1000) / sind(180/Z1);      % in m
+Dp2 = (pitch_1/1000) / sind(180/Z2);
+Dp3 = (pitch_2/1000) / sind(180/Z3);
+Dp4 = (pitch_2/1000) / sind(180/Z4);
+
+
+% results
+fprintf('Pitch diameters: Stage 1 driver (%dT) = %.5f mm, stage 1 driven (%dT) = %.5f mm, stage 2 driver (%dT) = %.5f mm, stage 2 driven (%dT) = %.5f mm\n', ...
+    Z1, Dp1*1000, Z2, Dp2*1000, Z3, Dp3*1000, Z4, Dp4*1000);
+fprintf('Chain lengths: stage1 %.1f mm, stage2 %.1f mm\n', L_stage1_mm, L_stage2_mm);
+fprintf('Center distances: stage1 %.1f mm, stage2 %.1f mm\n', C1, C2);
+
+
+fprintf('STAGE 1 - 06B chain (pitch = %.3f mm)\n', pitch)
+fprintf('   Driving sprocket (%dT) Dp= %.5f mm, stage 1 driven (%dT) = %.5f mm, stage 2 driver (%dT) = %.5f mm, stage 2 driven (%dT) = %.5f mm\n', ...
+
+
+
+
+%% ---------- TRANSMISSION EQUATIONS ----------
+% stage 1
+v_stage1 = (speed_max*Z1*pitch_1)/(2*pi*1000);              % m/s, chain linear velocity
+chainpull_stage1 = power_stage1/v_stage1;    % N
+
+% stage 1
+v_stage2 = (speed_jackshaft*Z3*pitch_2)/(2*pi*1000);
+chainpull_stage2 = power_per_wheelset/v_stage2;
+
+%% ---------- CENTRIFUGAL FORCE & TOTAL TENSION ----------
+% F_oc = q * v^2 [N]
+% F_total = F0 + F_oc [N]
+% where q = weight of 1 m chain [kg/m], v = chain velocity [m/s]
+
+% Stage 1 centrifugal force
+F_oc_stage1 = q_mass_2 * v_stage1^2;                           % N
+
+% Stage 2 centrifugal force
+F_oc_stage2 = q_mass_2 * v_stage2^2;                           % N
+
+% Total chain tension (traction force) for each stage
+% F1 = F0 + F_oc
+F_total_stage1 = chainpull_stage1 + F_oc_stage1;            % N
+F_total_stage2 = chainpull_stage2 + F_oc_stage2;            % N
+
+
+
+
+%% ---------- MATERIALS & SAFETY ----------
+% Approximate values for 06B chain (verify with manufacturer)
+tensile_strength_chain = 8900;   % in N, (minimum tensile strength for 06B chain according to ISO 606 - CHECK vendor)
+
+
+%% ---------- IDLERS ----------
+% Idler configuration: both idlers on stage-2
+num_idlers_stage1 = 0;   % no sprung idlers on stage-1
+num_idlers_stage2 = 2;   % both sprung idlers on stage-2 (split preload)
+
+% Idler defaults
+idler_travel = 25;     % mm - available travel for each idler
+idler_preload_ratio = 0.08; % fraction of working tension used as total preload for stage-2
+
+% Minimum per-stage total preload (keeps tiny systems from choosing too small springs)
+min_total_preload_stage1 = 0;   % N (stage1 no idlers)
+min_total_preload_stage2 = 80;  % N (total across all idlers on stage2)
+
+dynamic_factor = 1.3;
+make_plots = true;
+
+
+%% ---------- SHAFT DESIGN PARAMETERS ----------
+% shaft dimensions (in m)
+% motor shaft
+shaft1_length = 0.50;
+shaft1_support = 0.25;      % distance from sprocket to one of the bearings
+shaft1_diameter = 0.02;     % critical cross section diameter
+% jackshaft
+shaft2_length = 0.50;
+shaft2_support = 0.25;
+shaft2_spacing = 0.125;  % d between s-1 and s-2 sprockets, assume symmetry
+shaft2_diameter = 0.02;
+% wheelset
+shaft3_length = 0.50;
+shaft3_support = shaft2_spacing;
+shaft3_diameter = 0.02;
+
+% material properties
+S_uts = 420e6;              % UTS in Pa for shaft material (AISI 1020)
+S_y = 350e6;                % yield stress
+% endurance stress for each shaft
+[S_e1, S_e2, S_e3] = endurance_stress(S_uts, [shaft1_diameter, shaft2_diameter, shaft3_diameter]);
+
+
+%% ---------- SHAFT STRESSES & SUPPORT REACTIONS ----------
+% Applied forces (in NEWTON)
+F1 = 2*T_max/Dp1;          % F of s-1 driving sprocket on motor shaft
+F2 = 2*T_stage1/Dp2;       % F of s-1 driven sprocket on jackshaft
+% F3 = T_stage1/Dp3;         % F of *EACH* s-2 driving sprocket on jackshaft    I DONT THINK THIS IS NEEDED
+F4 = T_per_wheelset/Dp4;   % F of s-2 driven sprocket on each wheelset
+
+% Reactions on the bearings
+shaft1_reaction1 = F1*(shaft1_support/shaft1_length);   % motor shaft
+shaft1_reaction2 = F1 - shaft1_reaction1;
+
+shaft2_reaction1 = F2*(shaft2_support/shaft2_length);   % jackshaft
+shaft2_reaction2 = F2 - shaft2_reaction1;
+
+shaft3_reaction1 = F4*(shaft3_support/shaft3_length);   % wheelset
+shaft3_reaction2 = F4 - shaft3_reaction1;
+
+% Maximum shear force and bending moment
+shaft1_V = max([shaft1_reaction1 shaft1_reaction2]);    % N
+shaft1_M = shaft1_reaction1*shaft1_length;              % N.m
+
+shaft2_V = max([shaft2_reaction1 shaft2_reaction2]);
+shaft2_M = shaft2_reaction1*shaft2_length;
+
+shaft3_V = max([shaft3_reaction1 shaft3_reaction2]);
+shaft3_M = shaft3_reaction1*shaft3_length;
+
+% Stresses AT OUTER FIBER
+% (assuming bending + torsion is critical rather than shear force)
+shaft1_bending = (32*shaft1_M)/(pi*shaft1_diameter^3);
+shaft1_shear = (16*T_max)/(pi*shaft1_diameter^3);
+
+shaft2_bending = (32*shaft2_M)/(pi*shaft2_diameter^3);
+shaft2_shear = (16*T_stage1)/(pi*shaft2_diameter^3);
+
+shaft3_bending = (32*shaft3_M)/(pi*shaft3_diameter^3);
+shaft3_shear = (16*T_per_wheelset)/(pi*shaft3_diameter^3);
+
+
+%% ---------- STATIC SAFETY ----------
+% von Mises stresses
+shaft1_vm = sqrt(shaft1_bending^2 + 3*shaft1_shear^2);
+shaft2_vm = sqrt(shaft2_bending^2 + 3*shaft2_shear^2);
+shaft3_vm = sqrt(shaft3_bending^2 + 3*shaft3_shear^2);
+
+shaft1_static_safety = S_y/shaft1_vm;
+shaft2_static_safety = S_y/shaft2_vm;
+shaft3_static_safety = S_y/shaft3_vm;
+
+static_isOK = [shaft1_static_safety shaft2_static_safety shaft3_static_safety] >= safety_factor;
+
+
+%% ---------- FATIGUE SAFETY (for infinite life) ----------
+% we have torsion + rotating bending, this means that for fatigue:
+% shear stress = mean stress, bending stress = stress amplitude
+
+% Keyway static stress concentration coefficents, Kt
+Kt_torsion = 3.0;
+Kt_bending = 2.2;
+% notch sensitivity (for S_uts=420 MPa, and keyway radius of 0.2 mm)
+% values taken from figures 6.20 and 6.21 in Shigley
+notch_sensitivity = 0.5;
+% Fatigue stress concentration coefficents Kf = q*(Kt+1)-1
+Kf_bending = notch_sensitivity*(Kt_bending+1)-1;
+Kf_torsion = notch_sensitivity*(Kt_torsion+1)-1;
+
+% corrected stresses
+shaft1_bending_K = shaft1_bending*Kf_bending;
+shaft2_bending_K = shaft2_bending*Kf_bending;
+shaft3_bending_K = shaft3_bending*Kf_bending;
+shaft1_shear_K = shaft1_shear*Kf_torsion;
+shaft2_shear_K = shaft2_shear*Kf_torsion;
+shaft3_shear_K = shaft3_shear*Kf_torsion;
+
+% Check modified Goodman failure criterion
+shaft1_fatigue_safety = 1/((shaft1_bending_K/S_e1)+(shaft1_shear_K/S_uts));
+shaft2_fatigue_safety = 1/((shaft2_bending_K/S_e2)+(shaft2_shear_K/S_uts));
+shaft3_fatigue_safety = 1/((shaft3_bending_K/S_e3)+(shaft3_shear_K/S_uts));
+
+fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safety] >= safety_factor;
+
+
+% ----------------- IDLER SIZING (both idlers on stage-2) -----------------
+% Stage-1: no sprung idlers
+total_preload_stage1 = min_total_preload_stage1;   % 0 N
+per_idler_preload_stage1 = 0;
+k_idler_stage1 = 0;
+
+% Stage-2: total preload (distributed across num_idlers_stage2)
+if num_idlers_stage2 <= 0
+    error('num_idlers_stage2 must be >= 1 when placing idlers on stage-2.');
+end
+
+total_preload_stage2 = max(min_total_preload_stage2, idler_preload_ratio * F_stage2);   % N
+per_idler_preload_stage2 = total_preload_stage2 / num_idlers_stage2;                    % each idler supplies this preload
+k_idler_stage2 = per_idler_preload_stage2 / idler_travel;                               % N/mm per idler
+
+
+%% ---------- DISPLAY ----------
+fprintf('--- 06B solution (both idlers on stage-2) ---\n');
+fprintf('Total ratio = %.3g (%.3g x %.3g)\n', ratio_total, ratio1, ratio2);
+fprintf('Pitch diameters (mm): %dT=%.1f, %dT=%.1f, %dT=%.1f, %dT=%.1f\n', ...
+    N_stage1_driver, Dp1_driver, N_stage1_driven, Dp1_driven, N_stage2_driver, Dp2_driver, N_stage2_driven, Dp2_driven);
+fprintf('Torques (N·m): motor=%.2f, interm=%.2f, out=%.2f\n', T_max, T_int, T_out);
+fprintf('Design chain forces (dyn x%.2f): stage1=%.1f N, stage2=%.1f N\n', dynamic_factor, F_stage1, F_stage2);
+fprintf('Chain workable (SF %.2f)= %.1f N => margins: s1=%.1f%% s2=%.1f%%\n', safety_factor_chain, tensile_workable, margin1_pct, margin2_pct);
+fprintf('Chain lengths: stage1 %d links (%.1f mm), stage2 %d links (%.1f mm)\n', Lp1, L1_mm, Lp2, L2_mm);
+
+fprintf('\nIdler configuration:\n');
+fprintf('  Stage1: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
+    num_idlers_stage1, total_preload_stage1, per_idler_preload_stage1, k_idler_stage1);
+fprintf('  Stage2: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
+    num_idlers_stage2, total_preload_stage2, per_idler_preload_stage2, k_idler_stage2);
+
+fprintf('\nSuggested shaft diameters (mm): motor=%d, interm=%d, out=%d\n', d_motor_suggest, d_intermediate_suggest, d_output_suggest);
+
+%% plot (optional)
+if make_plots
+    figure; Tm_vec = linspace(1,30,200);
+    plot(Tm_vec./r1_driver * dynamic_factor); hold on;
+    plot((Tm_vec*ratio1*eta1)./r2_driver * dynamic_factor);
+    yline(tensile_workable,'k--'); legend('Stage1','Stage2','Chain workable');
+    xlabel('Motor torque (N·m)'); ylabel('Chain force (N)'); grid on;
+end
+
+%% helpers
+function s = pick_std(d_mm)
+    stds = [6 8 10 12 14 15 16 18 20 22 24 25 28 30 32 35 38 40 45 50];
+    idx = find(stds >= ceil(d_mm), 1, 'first');
+    if isempty(idx)
+        s = ceil(d_mm);
+    else
+        s = stds(idx);
+    end
+end
+
+function [S_e1, S_e2, S_e3] = endurance_stress(S_uts, d)
+    % theoretical endurance stress
+    S_e_theory = 0.5*S_uts;
+    
+    % convert diameters to mm
+    d = d*1000;
+
+    % Marin correction factors (check Shigley/PCMec slides)
+        % surface finish correction factor
+        k_surface = 4.51*(S_uts/1000000)^(-0.265);        % machined finish
+        % size factor
+        k_size = zeros(1,3);
+        j = 1;
+        for i = d
+            if i <= 51
+                k_size(j) = 1.24*i^(-0.107);
+            else
+                k_size(j) = 1.51*i^(-0.157);
+            end
+            j = j+1;
+        end
+
+    % actual endurance stress for each shaft
+    S_e1 = S_e_theory*k_surface*k_size(1);
+    S_e2 = S_e_theory*k_surface*k_size(2);
+    S_e3 = S_e_theory*k_surface*k_size(3);
+end
