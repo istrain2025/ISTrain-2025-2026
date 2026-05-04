@@ -15,7 +15,7 @@ Z3 = 19;                            % stage 2 driver
 Z4 = round(Z3*g2);                  %         driven
                                     
 % correction factors
-f1 = 1.3;                           % application factor, see renold pg 104
+f1 = 1.4;                           % application factor, see renold pg 104
 f2_stage1 = 19/Z1;                  % tooth factor for each stage
 f2_stage2 = 19/Z3;
 
@@ -23,7 +23,7 @@ safety_factor = 1.5;                % todo: apply pugsley method
 
 % geometry limitations (due to bogie design)
 L1_max = 180;                       % mm
-L2_max = 325;
+L_wheelbase = 650;
 
 
 %% ---------- POWER ----------
@@ -46,9 +46,9 @@ power_per_wheelset = f1*f2_stage2*speed_wheelset*T_per_wheelset;
 %% ---------- PITCH ----------
 % choose pitch from power and speed needed
 % Stage 1
-pitch_1 = 6;
+pitch_1 = 9.525;
 q_mass_1 = 0.4;                       % Chain mass per meter
-C_est_1 = 40*pitch_1;                 % estimate in pitches, actual C calculated later
+C_est_1 = 30*pitch_1;                 % estimate in pitches, actual C calculated later
 
 % chain length
 L_stage1 = (Z1+Z2)/2 + (2*C_est_1)/pitch_1 + ((((Z2-Z1)/(2*pi))^2)*pitch_1)/C_est_1 ;   % [pitches]
@@ -58,15 +58,27 @@ L_stage1_mm = L_stage1*pitch_1;                                                 
 C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 
 % Stage 2
-pitch_2 = 9.525;                      % mm - 06B pitch
-q_mass_2 = 0.40;                      % 06B
-C_est_2 = 40*pitch_2;
+pitch_2 = 9.525;                      % mm - 05B pitch
+q_mass_2 = 0.40;                      % 06B ??? fahhhhhh
+C_est_2 = [30*pitch_2 50*pitch_2];
 
-L_stage2 =  (Z3+Z4)/2 + (2*C_est_2)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C_est_2 ;
-L_stage2 = ceil(L_stage2 / 2) * 2;
-L_stage2_mm = pitch_2*L_stage2;
+j=1;
+L_stage2 = zeros(2,1);
+L_stage2_mm = zeros(2,1);
+C2 = zeros(2,1);
+for C = C_est_2
+    L_stage2(j) =  (Z3+Z4)/2 + (2*C)/pitch_2 + ((((Z4-Z3)/(2*pi))^2)*pitch_2)/C ;
+    L_stage2(j) = ceil(L_stage2(j) / 2) * 2;
+    L_stage2_mm(j) = pitch_2*L_stage2(j);
+    
+    C2(j) = (pitch_2/8)*(2*L_stage2(j)-Z4-Z3+sqrt((2*L_stage2(j)-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
+    
+    j=j+1;
+end
 
-C2 = (pitch_2/8)*(2*L_stage2-Z4-Z3+sqrt((2*L_stage2-Z4-Z3)^2 - ((pi/3.88)*(Z4-Z3)^2)));
+% center distances function of the center distance of stage 1
+C_stage2_curto = L_wheelbase/2 - (C1 - L1_max);
+C_stage2_longo = L_wheelbase - C_stage2_curto;
 
 % pitch diameters
 Dp1 = (pitch_1/1000) / sind(180/Z1);      % in m
@@ -251,7 +263,7 @@ fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safet
 %% ---------- PRINT RESULTS ----------
 fprintf('Selection power: stage 1 = %.1f W, stage 2 = %.1f W\n\n', power_stage1, power_per_wheelset);
 
-fprintf('STAGE 1 - 04B chain (pitch = %.3f mm)\n', pitch_1)
+fprintf('STAGE 1 - 06B chain (pitch = %.3f mm)\n', pitch_1)
 fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
     Z1, Dp1*1000, Z2, Dp2*1000);
 fprintf('   Chain length: %.1f mm\n', L_stage1_mm);
@@ -260,8 +272,9 @@ fprintf('   Center distance: %.1f mm\n\n', C1);
 fprintf('STAGE 2 - 06B chain (pitch = %.3f mm)\n', pitch_2)
 fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
     Z3, Dp3*1000, Z4, Dp4*1000);
-fprintf('   Chain length: %.1f mm\n', L_stage2_mm);
-fprintf('   Center distance: %.1f mm\n\n', C2);
+%fprintf('   Chain length: %.1f mm\n', L_stage2_mm);
+fprintf('   Center distances - short one: %.1f mm; long one: %.1f mm\n', C_stage2_curto, C_stage2_longo);
+fprintf('   IDEAL center distance: %.1f mm < C < %.1f mm \n\n', C2(1), C2(2));
 
 
 
