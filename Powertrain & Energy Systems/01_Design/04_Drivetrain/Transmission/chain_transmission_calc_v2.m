@@ -19,10 +19,10 @@ f1 = 1.4;                           % application factor, see renold pg 104
 f2_stage1 = 19/Z1;                  % tooth factor for each stage
 f2_stage2 = 19/Z3;
 
-safety_factor = 1.5;                % todo: apply pugsley method
+safety_factor = 2;                % todo: apply pugsley method
 
-% geometry limitations (due to bogie design)
-L1_max = 180;                       % mm
+% geometry limitations (due to bogie design) in mm
+L1_max = 180;                       % center to motor shaft longitudinal dist 
 L_wheelbase = 650;
 
 
@@ -36,7 +36,7 @@ power_stage1 = f1*f2_stage1*speed_jackshaft*T_stage1;
 
 % STAGE 2
 speed_wheelset = speed_jackshaft/g2;
-% note: total output torque is 2x what is given to each wheelset
+% total output torque is 2x what is given to each wheelset
 T_output = T_stage1*g2;
 T_per_wheelset = T_output/2;
 power_per_wheelset = f1*f2_stage2*speed_wheelset*T_per_wheelset;
@@ -58,8 +58,8 @@ L_stage1_mm = L_stage1*pitch_1;                                                 
 C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 
 % Stage 2
-pitch_2 = 9.525;                      % mm - 05B pitch
-q_mass_2 = 0.40;                      % 06B ??? fahhhhhh
+pitch_2 = 9.525;                      % mm - 06B pitch
+q_mass_2 = 0.40;                      % 06B
 C_est_2 = [30*pitch_2 50*pitch_2];
 
 j=1;
@@ -76,9 +76,10 @@ for C = C_est_2
     j=j+1;
 end
 
+
 % center distances function of the center distance of stage 1
-C_stage2_curto = L_wheelbase/2 - (C1 - L1_max);
-C_stage2_longo = L_wheelbase - C_stage2_curto;
+C_stage2_short = L_wheelbase/2 - (C1 - L1_max);
+C_stage2_long = L_wheelbase - C_stage2_short;
 
 % pitch diameters
 Dp1 = (pitch_1/1000) / sind(180/Z1);      % in m
@@ -125,16 +126,16 @@ tensile_strength_chain = 8900;   % in N, (minimum tensile strength for 06B chain
 % motor shaft
 shaft1_length = 0.50;
 shaft1_support = 0.25;      % distance from sprocket to one of the bearings
-shaft1_diameter = 0.02;     % critical cross section diameter
+shaft1_diameter = 0.02125;     % critical cross section diameter
 % jackshaft
 shaft2_length = 0.50;
 shaft2_support = 0.25;
 shaft2_spacing = 0.125;  % d between s-1 and s-2 sprockets, assume symmetry
-shaft2_diameter = 0.02;
+shaft2_diameter = 0.021;
 % wheelset
 shaft3_length = 0.50;
 shaft3_support = shaft2_spacing;
-shaft3_diameter = 0.02;
+shaft3_diameter = 0.03;
 
 % material properties
 S_uts = 420e6;              % UTS in Pa for shaft material (AISI 1020)
@@ -226,39 +227,6 @@ fatigue_isOK = [shaft1_fatigue_safety shaft2_fatigue_safety shaft3_fatigue_safet
 
 
 
-% 
-% %% ---------- IDLERS ----------
-% % Idler configuration: both idlers on stage-2
-% num_idlers_stage1 = 0;   % no sprung idlers on stage-1
-% num_idlers_stage2 = 2;   % both sprung idlers on stage-2 (split preload)
-% 
-% % Idler defaults
-% idler_travel = 25;     % mm - available travel for each idler
-% idler_preload_ratio = 0.08; % fraction of working tension used as total preload for stage-2
-% 
-% % Minimum per-stage total preload (keeps tiny systems from choosing too small springs)
-% min_total_preload_stage1 = 0;   % N (stage1 no idlers)
-% min_total_preload_stage2 = 80;  % N (total across all idlers on stage2)
-% 
-% dynamic_factor = 1.3;
-% make_plots = true;
-% 
-% % ----------------- IDLER SIZING (both idlers on stage-2) -----------------
-% % Stage-1: no sprung idlers
-% total_preload_stage1 = min_total_preload_stage1;   % 0 N
-% per_idler_preload_stage1 = 0;
-% k_idler_stage1 = 0;
-% 
-% % Stage-2: total preload (distributed across num_idlers_stage2)
-% if num_idlers_stage2 <= 0
-%     error('num_idlers_stage2 must be >= 1 when placing idlers on stage-2.');
-% end
-% 
-% total_preload_stage2 = max(min_total_preload_stage2, idler_preload_ratio * F_stage2);   % N
-% per_idler_preload_stage2 = total_preload_stage2 / num_idlers_stage2;                    % each idler supplies this preload
-% k_idler_stage2 = per_idler_preload_stage2 / idler_travel;                               % N/mm per idler
-
-
 
 %% ---------- PRINT RESULTS ----------
 fprintf('Selection power: stage 1 = %.1f W, stage 2 = %.1f W\n\n', power_stage1, power_per_wheelset);
@@ -273,53 +241,14 @@ fprintf('STAGE 2 - 06B chain (pitch = %.3f mm)\n', pitch_2)
 fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
     Z3, Dp3*1000, Z4, Dp4*1000);
 %fprintf('   Chain length: %.1f mm\n', L_stage2_mm);
-fprintf('   Center distances - short one: %.1f mm; long one: %.1f mm\n', C_stage2_curto, C_stage2_longo);
+fprintf('   Center distances - short one: %.1f mm; long one: %.1f mm\n', C_stage2_short, C_stage2_long);
 fprintf('   IDEAL center distance: %.1f mm < C < %.1f mm \n\n', C2(1), C2(2));
 
 
 
 
 
-
-
-
-%% ---------- DISPLAY (old) ----------
-%fprintf('--- 06B solution (both idlers on stage-2) ---\n');
-%fprintf('Total ratio = %.3g (%.3g x %.3g)\n', ratio_total, ratio1, ratio2);
-%fprintf('Pitch diameters (mm): %dT=%.1f, %dT=%.1f, %dT=%.1f, %dT=%.1f\n', ...
-    %N_stage1_driver, Dp1_driver, N_stage1_driven, Dp1_driven, N_stage2_driver, Dp2_driver, N_stage2_driven, Dp2_driven);
-%fprintf('Torques (N·m): motor=%.2f, interm=%.2f, out=%.2f\n', T_max, T_int, T_out);
-%fprintf('Design chain forces (dyn x%.2f): stage1=%.1f N, stage2=%.1f N\n', dynamic_factor, F_stage1, F_stage2);
-%fprintf('Chain workable (SF %.2f)= %.1f N => margins: s1=%.1f%% s2=%.1f%%\n', safety_factor_chain, tensile_workable, margin1_pct, margin2_pct);
-%fprintf('Chain lengths: stage1 %d links (%.1f mm), stage2 %d links (%.1f mm)\n', Lp1, L1_mm, Lp2, L2_mm);
-
-%fprintf('\nIdler configuration:\n');
-%fprintf('  Stage1: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
- %   num_idlers_stage1, total_preload_stage1, per_idler_preload_stage1, k_idler_stage1);
-%fprintf('  Stage2: num_idlers = %d, total_preload = %.1f N, per-idler = %.1f N, k_per_idler = %.2f N/mm\n', ...
- %   num_idlers_stage2, total_preload_stage2, per_idler_preload_stage2, k_idler_stage2);
-
-%fprintf('\nSuggested shaft diameters (mm): motor=%d, interm=%d, out=%d\n', d_motor_suggest, d_intermediate_suggest, d_output_suggest);
-
-%% plot (optional)
-%if make_plots
- %   figure; Tm_vec = linspace(1,30,200);
-  %  plot(Tm_vec./r1_driver * dynamic_factor); hold on;
-   % plot((Tm_vec*ratio1*eta1)./r2_driver * dynamic_factor);
-    %yline(tensile_workable,'k--'); legend('Stage1','Stage2','Chain workable');
-    %xlabel('Motor torque (N·m)'); ylabel('Chain force (N)'); grid on;
-%end
-
-%% helpers
-function s = pick_std(d_mm)
-    stds = [6 8 10 12 14 15 16 18 20 22 24 25 28 30 32 35 38 40 45 50];
-    idx = find(stds >= ceil(d_mm), 1, 'first');
-    if isempty(idx)
-        s = ceil(d_mm);
-    else
-        s = stds(idx);
-    end
-end
+%% helper functions
 
 function [S_e1, S_e2, S_e3] = endurance_stress(S_uts, d)
     % theoretical endurance stress

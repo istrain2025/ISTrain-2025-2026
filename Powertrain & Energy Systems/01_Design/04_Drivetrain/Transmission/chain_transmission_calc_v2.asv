@@ -15,14 +15,14 @@ Z3 = 19;                            % stage 2 driver
 Z4 = round(Z3*g2);                  %         driven
                                     
 % correction factors
-f1 = 1.3;                           % application factor, see renold pg 104
+f1 = 1.4;                           % application factor, see renold pg 104
 f2_stage1 = 19/Z1;                  % tooth factor for each stage
 f2_stage2 = 19/Z3;
 
 safety_factor = 1.5;                % todo: apply pugsley method
 
-% geometry limitations (due to bogie design)
-L1_max = 180;                       % mm
+% geometry limitations (due to bogie design) in mm
+L1_max = 180;                       % center to motor shaft longitudinal dist 
 L_wheelbase = 650;
 
 
@@ -36,7 +36,7 @@ power_stage1 = f1*f2_stage1*speed_jackshaft*T_stage1;
 
 % STAGE 2
 speed_wheelset = speed_jackshaft/g2;
-% note: total output torque is 2x what is given to each wheelset
+% total output torque is 2x what is given to each wheelset
 T_output = T_stage1*g2;
 T_per_wheelset = T_output/2;
 power_per_wheelset = f1*f2_stage2*speed_wheelset*T_per_wheelset;
@@ -58,8 +58,8 @@ L_stage1_mm = L_stage1*pitch_1;                                                 
 C1 = (pitch_1/8)*(2*L_stage1-Z2-Z1+sqrt((2*L_stage1-Z2-Z1)^2 - ((pi/3.88)*(Z2-Z1)^2)));
 
 % Stage 2
-pitch_2 = 8;                      % mm - 05B pitch
-q_mass_2 = 0.40;                      % 06B ??? fahhhhhh
+pitch_2 = 9.525;                      % mm - 06B pitch
+q_mass_2 = 0.40;                      % 06B
 C_est_2 = [30*pitch_2 50*pitch_2];
 
 j=1;
@@ -269,7 +269,7 @@ fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.
 fprintf('   Chain length: %.1f mm\n', L_stage1_mm);
 fprintf('   Center distance: %.1f mm\n\n', C1);
 
-fprintf('STAGE 2 - 05B chain (pitch = %.3f mm)\n', pitch_2)
+fprintf('STAGE 2 - 06B chain (pitch = %.3f mm)\n', pitch_2)
 fprintf('   Driving sprocket (%dT): Dp = %.5f mm, driven sprocket (%dT): Dp = %.5f mm\n', ...
     Z3, Dp3*1000, Z4, Dp4*1000);
 %fprintf('   Chain length: %.1f mm\n', L_stage2_mm);
