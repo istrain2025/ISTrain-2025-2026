@@ -37,9 +37,9 @@ n = 2.0;        % design safety factor
 %% ---- GEOMETRY INPUTS --------------------------------------
 % Shaft positions  [m]  (measured from left bearing BL)
 L  = 0.450;      % total bearing span
-a1 = 0.08;      % S1 position  (left secondary sprocket)
-a2 = 0.20;      % SI position  (intermediate/input sprocket)  – must satisfy a1<a2<a3
-a3 = 0.32;      % S2 position  (right secondary sprocket)
+a1 = 0.11;      % S1 position  (left secondary sprocket)
+a2 = 0.15;      % SI position  (intermediate/input sprocket)  – must satisfy a1<a2<a3
+a3 = 0.33;      % S2 position  (right secondary sprocket)
 % Verify ordering
 assert(0 < a1 && a1 < a2 && a2 < a3 && a3 < L, ...
     'Positions must satisfy 0 < a1 < a2 < a3 < L');
@@ -47,7 +47,7 @@ assert(0 < a1 && a1 < a2 && a2 < a3 && a3 < L, ...
 % Sprocket radii  [m]
 R_motor = 0.0518;  % motor sprocket radius (on motor side, drives SI)
 R_I     = 0.1729;  % intermediate sprocket radius  (SI, input)
-R_S     = 0.0518;  % secondary sprocket radius  (S1 = S2, output)
+R_S     = 0.0579;  % secondary sprocket radius  (S1 = S2, output)
 
 % Motor torque  [N·m]
 M_motor = 20;
